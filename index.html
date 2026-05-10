@@ -373,7 +373,7 @@
         </div>
         <div class="form-group">
           <label for="inp-year">Anno</label>
-          <input type="number" id="inp-year" style="width:90px">
+          <input type="number" id="inp-year" min="2020" max="2099" style="width:90px">
         </div>
         <div class="form-group" style="justify-content:flex-end">
           <button class="btn btn-primary" onclick="loadPlanningGrid()">🔄 Carica Griglia</button>
@@ -465,7 +465,7 @@ const state = {
 // ──────────────────────────────────────────────────────────
 function uid() {
   // Prefer the cryptographically secure UUID API when available
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+  if (typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
   // Fallback: timestamp + random suffix (negligible collision risk for this use-case)
@@ -833,7 +833,7 @@ function generateSchedule() {
     // How many workers should work today?
     // Proportional: spread remaining worker-days evenly over remaining calendar days.
     // If all workers have exhausted their targets, no one is assigned today.
-    if (totalRemWD === 0) continue;
+    if (totalRemWD === 0) continue; // no workers have remaining shifts; skip this day
     const targetPerDay = Math.max(MIN_WORKERS_PER_DAY, Math.round(totalRemWD / rem));
 
     // Score workers
@@ -1100,7 +1100,7 @@ function handleImport(event) {
       refreshAll();
       alert('Importazione completata!');
     } catch(err) {
-      alert('Errore nell\'importazione: ' + err.message);
+      alert(`Errore nell'importazione: ${err.message}`);
     }
   };
   reader.readAsText(file);
