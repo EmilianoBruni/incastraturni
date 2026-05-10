@@ -494,6 +494,16 @@ const DOW_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
 const MONTH_NAMES = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
   'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 
+// ── Year range constants ──
+const MIN_YEAR = 2020;
+const MAX_YEAR = 2099;
+
+// ── Scheduling score weights ──
+const SCORE_PREFERRED         =  1000; // boost for worker-preferred day
+const SCORE_CONSECUTIVE_PENALTY = 500; // penalty for working the day before
+const SCORE_WEEKEND_WEIGHT    =    80; // per-weekend-day penalty (multiplied by weekends already worked)
+const SCORE_HOURS_WEIGHT      =    10; // bonus per remaining shift-day (to prioritise workers with more to do)
+
 // ──────────────────────────────────────────────────────────
 // LOCAL STORAGE
 // ──────────────────────────────────────────────────────────
@@ -645,7 +655,7 @@ function escHtml(str) {
 function loadPlanningGrid() {
   const m = parseInt(document.getElementById('sel-month').value);
   const y = parseInt(document.getElementById('inp-year').value);
-  if (isNaN(y) || y < 2020 || y > 2099) { alert('Anno non valido.'); return; }
+  if (isNaN(y) || y < MIN_YEAR || y > MAX_YEAR) { alert('Anno non valido.'); return; }
   if (!state.workers.length) { alert('Aggiungi almeno un lavoratore prima.'); return; }
 
   state.month = m;
@@ -754,8 +764,15 @@ function clearConstraints() {
 
 /**
  * Calculate target working days for a worker in the month.
- * Monthly hours ≈ weeklyHours × (daysInMonth / 7)
- * Splits into 12h shifts and/or 6h shifts according to capabilities.
+ *
+ * Monthly hours approximation: weeklyHours × (totalDays / 7).
+ * This is a proportional approximation: dividing by 7 converts the weekly
+ * rate to a daily rate, then multiplies by the actual calendar days in the
+ * month. It slightly under- or over-estimates compared to counting exact
+ * ISO weeks, but is accurate to within one shift for typical months.
+ *
+ * The result is rounded to the nearest whole number of shifts to produce
+ * a schedule that is achievable with discrete shift blocks.
  */
 function calcTargetDays(worker, totalDays) {
   const monthlyHours = worker.weeklyHours * (totalDays / 7);
@@ -804,7 +821,10 @@ function generateSchedule() {
     // Total remaining worker-days across all workers
     const totalRemWD = state.workers.reduce((s, w) => s + ws[w.id].totalRem(), 0);
 
-    // How many workers should work today (proportional distribution)?
+    // How many workers should work today?
+    // Proportional: spread remaining worker-days evenly over remaining calendar days.
+    // If all workers have exhausted their targets, no one is assigned today.
+    if (totalRemWD === 0) continue;
     const targetPerDay = Math.max(1, Math.round(totalRemWD / rem));
 
     // Score workers
@@ -817,10 +837,10 @@ function generateSchedule() {
         if (con === 'unavailable') return null;
 
         let score = 0;
-        if (con === 'preferred')       score += 1000;
-        if (s.lastDay === d - 1)       score -= 500; // consecutive-day penalty
-        if (we)                        score -= s.weekendCnt * 80; // weekend-fairness
-        score += s.totalRem() * 10;    // prefer workers with more hours left
+        if (con === 'preferred')  score += SCORE_PREFERRED;
+        if (s.lastDay === d - 1)  score -= SCORE_CONSECUTIVE_PENALTY; // consecutive-day penalty
+        if (we)                   score -= s.weekendCnt * SCORE_WEEKEND_WEIGHT; // weekend-fairness
+        score += s.totalRem() * SCORE_HOURS_WEIGHT; // prefer workers with more hours left
 
         return { w, s, ck, score };
       })
