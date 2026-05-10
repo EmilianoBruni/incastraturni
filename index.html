@@ -373,7 +373,7 @@
         </div>
         <div class="form-group">
           <label for="inp-year">Anno</label>
-          <input type="number" id="inp-year" min="2020" max="2099" style="width:90px">
+          <input type="number" id="inp-year" style="width:90px">
         </div>
         <div class="form-group" style="justify-content:flex-end">
           <button class="btn btn-primary" onclick="loadPlanningGrid()">🔄 Carica Griglia</button>
@@ -464,7 +464,12 @@ const state = {
 // HELPERS
 // ──────────────────────────────────────────────────────────
 function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  // Prefer the cryptographically secure UUID API when available
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback: timestamp + random suffix (negligible collision risk for this use-case)
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
 }
 
 function daysInMonth(year, month) {
@@ -499,10 +504,12 @@ const MIN_YEAR = 2020;
 const MAX_YEAR = 2099;
 
 // ── Scheduling score weights ──
-const SCORE_PREFERRED         =  1000; // boost for worker-preferred day
-const SCORE_CONSECUTIVE_PENALTY = 500; // penalty for working the day before
-const SCORE_WEEKEND_WEIGHT    =    80; // per-weekend-day penalty (multiplied by weekends already worked)
-const SCORE_HOURS_WEIGHT      =    10; // bonus per remaining shift-day (to prioritise workers with more to do)
+const SCORE_PREFERRED           =  1000; // boost for worker-preferred day
+const SCORE_CONSECUTIVE_PENALTY =   500; // penalty for working the day before
+const SCORE_WEEKEND_WEIGHT      =    80; // per-weekend-day penalty (multiplied by weekends already worked)
+const SCORE_HOURS_WEIGHT        =    10; // bonus per remaining shift-day (to prioritise workers with more to do)
+const DAYS_PER_WEEK             =     7; // calendar days in a week (used for monthly-hours approximation)
+const MIN_WORKERS_PER_DAY       =     1; // minimum workers to assign per day during first-pass scheduling
 
 // ──────────────────────────────────────────────────────────
 // LOCAL STORAGE
@@ -590,8 +597,10 @@ function editWorker(id) {
 function deleteWorker(id) {
   if (!confirm('Eliminare questo lavoratore?')) return;
   state.workers = state.workers.filter(w => w.id !== id);
-  // clean constraints
-  Object.keys(state.constraints).forEach(k => { if (k.startsWith(id + '_')) delete state.constraints[k]; });
+  // clean constraints — rebuild without keys belonging to this worker
+  state.constraints = Object.fromEntries(
+    Object.entries(state.constraints).filter(([k]) => !k.startsWith(id + '_'))
+  );
   // clean assignments
   Object.values(state.assignments).forEach(list => {
     const idx = list.findIndex(a => a.workerId === id);
@@ -775,7 +784,7 @@ function clearConstraints() {
  * a schedule that is achievable with discrete shift blocks.
  */
 function calcTargetDays(worker, totalDays) {
-  const monthlyHours = worker.weeklyHours * (totalDays / 7);
+  const monthlyHours = worker.weeklyHours * (totalDays / DAYS_PER_WEEK);
   if (worker.shift12h && worker.shift6h) {
     const d12 = Math.floor(monthlyHours / 12);
     const rem  = monthlyHours - d12 * 12;
@@ -825,7 +834,7 @@ function generateSchedule() {
     // Proportional: spread remaining worker-days evenly over remaining calendar days.
     // If all workers have exhausted their targets, no one is assigned today.
     if (totalRemWD === 0) continue;
-    const targetPerDay = Math.max(1, Math.round(totalRemWD / rem));
+    const targetPerDay = Math.max(MIN_WORKERS_PER_DAY, Math.round(totalRemWD / rem));
 
     // Score workers
     const scored = state.workers
