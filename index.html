@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IncastraTurni – Gestione Turni</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --pref-bg: #bbf7d0;
+      --unavail-bg: #fecaca;
+      --shift12-bg: #bfdbfe;
+      --morning-bg: #fde68a;
+      --afternoon-bg: #ddd6fe;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: .75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 6px rgba(0,0,0,.18);
+    }
+    header h1 { font-size: 1.35rem; font-weight: 700; }
+    .header-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .45rem .9rem;
+      border: none; border-radius: .375rem;
+      cursor: pointer; font-size: .825rem; font-weight: 500;
+      transition: filter .15s;
+      white-space: nowrap;
+    }
+    .btn:hover { filter: brightness(.92); }
+    .btn:active { filter: brightness(.85); }
+    .btn-primary   { background: var(--primary); color: #fff; }
+    .btn-success   { background: var(--success); color: #fff; }
+    .btn-danger    { background: var(--danger);  color: #fff; }
+    .btn-outline   { background: #fff; color: var(--gray-700); border: 1px solid var(--gray-300); }
+    .btn-white     { background: #fff; color: var(--primary); }
+    .btn-sm        { padding: .25rem .5rem; font-size: .75rem; }
+    .btn-icon      { padding: .3rem .5rem; }
+
+    /* ── Tab navigation ── */
+    nav {
+      background: #fff;
+      border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      padding: 0 1.5rem;
+      overflow-x: auto;
+    }
+    .tab {
+      padding: .85rem 1.25rem;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font-weight: 500; font-size: .9rem;
+      color: var(--gray-600);
+      white-space: nowrap;
+      transition: color .15s, border-color .15s;
+    }
+    .tab:hover { color: var(--primary); }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    /* ── Main layout ── */
+    main { padding: 1.5rem; max-width: 1600px; margin: 0 auto; }
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: .5rem;
+      border: 1px solid var(--gray-200);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .card h2 { font-size: 1.05rem; font-weight: 600; margin-bottom: 1rem; }
+
+    /* ── Form ── */
+    .form-row {
+      display: flex; gap: .75rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: .75rem;
+    }
+    .form-group { display: flex; flex-direction: column; gap: .25rem; }
+    .form-group label { font-size: .8rem; font-weight: 500; color: var(--gray-700); }
+    .form-group input, .form-group select {
+      padding: .45rem .75rem;
+      border: 1px solid var(--gray-300); border-radius: .375rem;
+      font-size: .875rem;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: 2px solid var(--primary); border-color: transparent;
+    }
+    .checkbox-row {
+      display: flex; gap: .75rem; align-items: center; flex-wrap: wrap;
+      margin-top: .15rem;
+    }
+    .checkbox-row label {
+      display: flex; align-items: center; gap: .3rem;
+      font-size: .85rem; cursor: pointer;
+    }
+
+    /* ── Workers table ── */
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      background: var(--gray-50);
+      padding: .6rem .75rem;
+      text-align: left; font-size: .75rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .04em; color: var(--gray-600);
+      border-bottom: 1px solid var(--gray-200);
+    }
+    td { padding: .6rem .75rem; border-bottom: 1px solid var(--gray-100); font-size: .85rem; }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--gray-50); }
+
+    .badge {
+      display: inline-block; padding: .1rem .45rem;
+      border-radius: 9999px; font-size: .7rem; font-weight: 600;
+    }
+    .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+    .badge-green  { background: #dcfce7; color: #15803d; }
+    .badge-purple { background: #f3e8ff; color: #7e22ce; }
+
+    /* ── Constraint / Results grid ── */
+    .grid-wrap { overflow-x: auto; }
+
+    .sched-grid { border-collapse: collapse; font-size: .72rem; white-space: nowrap; }
+    .sched-grid th, .sched-grid td {
+      border: 1px solid var(--gray-200);
+      text-align: center; padding: 0;
+    }
+    .sched-grid th { background: var(--gray-50); font-weight: 600; font-size: .7rem; }
+
+    /* sticky worker-name column */
+    .col-name {
+      text-align: left !important;
+      padding: .4rem .6rem !important;
+      font-weight: 500;
+      white-space: nowrap;
+      min-width: 130px;
+      position: sticky; left: 0;
+      background: #fff;
+      z-index: 2;
+    }
+    .sched-grid thead .col-name { background: var(--gray-50); }
+
+    /* day header */
+    .day-hdr {
+      min-width: 38px; max-width: 38px;
+      padding: .25rem .1rem !important;
+      line-height: 1.2;
+    }
+    .day-hdr.weekend { background: #fef3c7; }
+    .day-hdr .dn { font-size: .6rem; color: var(--gray-600); }
+
+    /* constraint cells */
+    .c-cell {
+      width: 38px; height: 36px;
+      cursor: pointer;
+      user-select: none;
+      transition: filter .1s;
+    }
+    .c-cell:hover { filter: brightness(.9); }
+    .c-cell.preferred  { background: var(--pref-bg); }
+    .c-cell.unavailable { background: var(--unavail-bg); }
+    .c-cell.weekend    { background: #fffbeb; }
+    .c-cell.preferred.weekend  { background: #86efac; }
+    .c-cell.unavailable.weekend { background: #fca5a5; }
+
+    /* result cells */
+    .r-cell {
+      width: 38px; height: 36px;
+      font-size: .62rem; font-weight: 600;
+      vertical-align: middle;
+    }
+    .r-cell.shift-12h       { background: var(--shift12-bg);   color: #1d4ed8; }
+    .r-cell.shift-morning   { background: var(--morning-bg);   color: #92400e; }
+    .r-cell.shift-afternoon { background: var(--afternoon-bg); color: #6b21a8; }
+    .r-cell.unavailable     { background: var(--unavail-bg);   color: #991b1b; font-size:.55rem; }
+    .r-cell.weekend         { background: #fffbeb; }
+
+    /* totals column */
+    .col-total {
+      min-width: 70px; padding: .4rem .5rem !important;
+      font-size: .75rem; text-align: center;
+    }
+
+    /* ── Month selector ── */
+    .month-bar {
+      display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .month-bar select, .month-bar input[type="number"] {
+      padding: .45rem .6rem;
+      border: 1px solid var(--gray-300); border-radius: .375rem;
+      font-size: .875rem;
+    }
+
+    /* ── Legend ── */
+    .legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: .75rem; font-size: .75rem; }
+    .legend-item { display: flex; align-items: center; gap: .3rem; }
+    .legend-dot {
+      width: 14px; height: 14px; border-radius: 2px;
+      border: 1px solid var(--gray-300);
+    }
+
+    /* ── Stats ── */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr));
+      gap: .75rem; margin-top: .75rem;
+    }
+    .stat-card {
+      background: var(--gray-50); border: 1px solid var(--gray-200);
+      border-radius: .375rem; padding: .75rem; text-align: center;
+    }
+    .stat-val  { font-size: 1.4rem; font-weight: 700; color: var(--primary); }
+    .stat-lbl  { font-size: .7rem; color: var(--gray-600); margin-top: .15rem; }
+
+    /* ── Alert ── */
+    .alert {
+      padding: .7rem 1rem; border-radius: .375rem;
+      margin-bottom: 1rem; font-size: .85rem;
+    }
+    .alert-info    { background: #dbeafe; color: #1e40af; }
+    .alert-success { background: #dcfce7; color: #166534; }
+    .alert-warning { background: #fef3c7; color: #92400e; }
+
+    /* ── Actions bar ── */
+    .actions-bar { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 200;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: .5rem;
+      padding: 1.5rem; width: 95%; max-width: 520px;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 1rem; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+    textarea {
+      width: 100%; padding: .5rem; border: 1px solid var(--gray-300);
+      border-radius: .375rem; font-family: monospace; font-size: .75rem;
+      resize: vertical;
+    }
+
+    /* ── Misc ── */
+    .empty-state { text-align: center; padding: 2rem; color: var(--gray-400); font-size: .9rem; }
+    .hint { font-size: .75rem; color: var(--gray-600); margin-top: .3rem; }
+    hr { border: none; border-top: 1px solid var(--gray-200); margin: 1rem 0; }
+
+    @media (max-width: 640px) {
+      header { flex-direction: column; gap: .5rem; }
+      main { padding: .75rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════ HEADER -->
+<header>
+  <h1>🗓️ IncastraTurni</h1>
+  <div class="header-actions">
+    <button class="btn btn-white" onclick="startExport()">📤 Esporta JSON</button>
+    <button class="btn btn-white" onclick="document.getElementById('fileImport').click()">📥 Importa JSON</button>
+    <input type="file" id="fileImport" accept=".json" style="display:none" onchange="handleImport(event)">
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════ TABS -->
+<nav>
+  <div class="tab active" data-tab="workers">👥 Lavoratori</div>
+  <div class="tab" data-tab="planning">📋 Pianificazione</div>
+  <div class="tab" data-tab="results">✅ Risultati</div>
+</nav>
+
+<main>
+
+  <!-- ══════════════════════════════ LAVORATORI -->
+  <section id="tab-workers" class="section active">
+    <div class="card">
+      <h2 id="worker-form-title">➕ Aggiungi Lavoratore</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="inp-surname">Cognome *</label>
+          <input type="text" id="inp-surname" placeholder="Rossi" style="min-width:150px">
+        </div>
+        <div class="form-group">
+          <label for="inp-hours">Ore settimanali *</label>
+          <input type="number" id="inp-hours" min="1" max="60" value="36" style="width:110px">
+        </div>
+        <div class="form-group">
+          <label>Tipo turni</label>
+          <div class="checkbox-row">
+            <label><input type="checkbox" id="chk-6h"> Turni da 6h</label>
+            <label><input type="checkbox" id="chk-12h" checked> Turni da 12h</label>
+          </div>
+        </div>
+        <div class="form-group" style="justify-content:flex-end">
+          <input type="hidden" id="edit-id" value="">
+          <div style="display:flex;gap:.4rem">
+            <button class="btn btn-primary" onclick="saveWorker()">💾 Salva</button>
+            <button class="btn btn-outline" id="btn-cancel-edit" onclick="cancelEdit()" style="display:none">✕ Annulla</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint">Seleziona almeno un tipo di turno.</p>
+    </div>
+
+    <div class="card">
+      <h2>👥 Elenco Lavoratori</h2>
+      <div id="workers-table-wrap">
+        <div class="empty-state" id="workers-empty">Nessun lavoratore inserito.</div>
+        <table id="workers-table" style="display:none">
+          <thead>
+            <tr>
+              <th>Cognome</th>
+              <th>Ore/settimana</th>
+              <th>Turni</th>
+              <th style="width:100px">Azioni</th>
+            </tr>
+          </thead>
+          <tbody id="workers-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════ PIANIFICAZIONE -->
+  <section id="tab-planning" class="section">
+    <div class="card">
+      <h2>📅 Seleziona Mese</h2>
+      <div class="month-bar">
+        <div class="form-group">
+          <label for="sel-month">Mese</label>
+          <select id="sel-month">
+            <option value="1">Gennaio</option><option value="2">Febbraio</option>
+            <option value="3">Marzo</option><option value="4">Aprile</option>
+            <option value="5">Maggio</option><option value="6">Giugno</option>
+            <option value="7">Luglio</option><option value="8">Agosto</option>
+            <option value="9">Settembre</option><option value="10">Ottobre</option>
+            <option value="11">Novembre</option><option value="12">Dicembre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="inp-year">Anno</label>
+          <input type="number" id="inp-year" min="2020" max="2099" style="width:90px">
+        </div>
+        <div class="form-group" style="justify-content:flex-end">
+          <button class="btn btn-primary" onclick="loadPlanningGrid()">🔄 Carica Griglia</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🎯 Vincoli</h2>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-dot" style="background:var(--pref-bg)"></span> Preferenza (tasto dx)</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--unavail-bg)"></span> Indisponibile (tasto sx)</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#fffbeb"></span> Weekend</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#fff;border:1px solid #d1d5db"></span> Disponibile</span>
+      </div>
+      <div id="planning-empty" class="empty-state">Carica la griglia per impostare i vincoli.</div>
+      <div class="grid-wrap" id="planning-grid-wrap" style="display:none">
+        <table class="sched-grid" id="planning-grid"></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="actions-bar">
+        <button class="btn btn-success" onclick="generateSchedule()">⚡ Genera Turni</button>
+        <button class="btn btn-outline" onclick="clearConstraints()">🗑️ Azzera Vincoli</button>
+      </div>
+      <p class="hint">La generazione tiene conto di: vincoli, ore settimanali, giorni consecutivi, distribuzione weekend.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════ RISULTATI -->
+  <section id="tab-results" class="section">
+    <div class="card">
+      <div class="actions-bar">
+        <button class="btn btn-success" onclick="generateSchedule()">⚡ Rigenera Turni</button>
+        <button class="btn btn-outline" onclick="startExport()">📤 Esporta JSON</button>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-dot" style="background:var(--shift12-bg)"></span> 12h (08–20)</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--morning-bg)"></span> Mattina (08–14)</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--afternoon-bg)"></span> Pomeriggio (14–20)</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--unavail-bg)"></span> Indisponibile</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#fffbeb"></span> Weekend</span>
+      </div>
+      <div id="results-empty" class="empty-state">Nessun turno generato. Vai nella tab Pianificazione e premi "Genera Turni".</div>
+      <div class="grid-wrap" id="results-grid-wrap" style="display:none">
+        <table class="sched-grid" id="results-grid"></table>
+      </div>
+    </div>
+
+    <div class="card" id="stats-card" style="display:none">
+      <h2>📊 Riepilogo</h2>
+      <div id="stats-container"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════ EXPORT MODAL -->
+<div class="modal-overlay" id="export-modal">
+  <div class="modal">
+    <h3>📤 Esporta JSON</h3>
+    <p style="font-size:.8rem;margin-bottom:.5rem">Copia il JSON qui sotto e salvalo come file .json</p>
+    <textarea id="export-textarea" rows="14" readonly></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="downloadJSON()">⬇️ Scarica file</button>
+      <button class="btn btn-outline" onclick="closeModal('export-modal')">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ SCRIPT -->
+<script>
+'use strict';
+
+// ──────────────────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────────────────
+const state = {
+  workers: [],       // [{id, surname, weeklyHours, shift6h, shift12h}]
+  month: new Date().getMonth() + 1,
+  year:  new Date().getFullYear(),
+  constraints: {},   // key "wId_YYYY-MM-DD" → "preferred"|"unavailable"
+  assignments: {},   // key "YYYY-MM-DD"     → [{workerId, shiftType, start, end}]
+};
+
+// ──────────────────────────────────────────────────────────
+// HELPERS
+// ──────────────────────────────────────────────────────────
+function uid() {
+  // Prefer the cryptographically secure UUID API when available
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback: timestamp + random suffix (negligible collision risk for this use-case)
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+}
+
+function daysInMonth(year, month) {
+  return new Date(year, month, 0).getDate();
+}
+
+function dateKey(year, month, day) {
+  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+}
+
+function constraintKey(workerId, dKey) {
+  return `${workerId}_${dKey}`;
+}
+
+// 0=Mon … 6=Sun (ISO week)
+function isoDow(year, month, day) {
+  const d = new Date(year, month - 1, day).getDay(); // 0=Sun
+  return d === 0 ? 6 : d - 1;
+}
+
+function isWeekend(year, month, day) {
+  const dow = isoDow(year, month, day);
+  return dow === 5 || dow === 6; // Sat=5, Sun=6
+}
+
+const DOW_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+const MONTH_NAMES = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+  'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+// ── Year range constants ──
+const MIN_YEAR = 2020;
+const MAX_YEAR = 2099;
+
+// ── Scheduling score weights ──
+const SCORE_PREFERRED           =  1000; // boost for worker-preferred day
+const SCORE_CONSECUTIVE_PENALTY =   500; // penalty for working the day before
+const SCORE_WEEKEND_WEIGHT      =    80; // per-weekend-day penalty (multiplied by weekends already worked)
+const SCORE_HOURS_WEIGHT        =    10; // bonus per remaining shift-day (to prioritise workers with more to do)
+const DAYS_PER_WEEK             =     7; // calendar days in a week (used for monthly-hours approximation)
+const MIN_WORKERS_PER_DAY       =     1; // minimum workers to assign per day during first-pass scheduling
+
+// ──────────────────────────────────────────────────────────
+// LOCAL STORAGE
+// ──────────────────────────────────────────────────────────
+const LS_KEY = 'incastraturni_v1';
+
+function saveState() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      workers: state.workers,
+      month: state.month,
+      year: state.year,
+      constraints: state.constraints,
+      assignments: state.assignments,
+    }));
+  } catch(e) { console.warn('localStorage save failed', e); }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved.workers)     state.workers     = saved.workers;
+    if (saved.month)       state.month       = saved.month;
+    if (saved.year)        state.year        = saved.year;
+    if (saved.constraints) state.constraints = saved.constraints;
+    if (saved.assignments) state.assignments = saved.assignments;
+  } catch(e) { console.warn('localStorage load failed', e); }
+}
+
+// ──────────────────────────────────────────────────────────
+// TAB NAVIGATION
+// ──────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === `tab-${name}`));
+}
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => switchTab(t.dataset.tab));
+});
+
+// ──────────────────────────────────────────────────────────
+// WORKER MANAGEMENT
+// ──────────────────────────────────────────────────────────
+function saveWorker() {
+  const surname    = document.getElementById('inp-surname').value.trim();
+  const weeklyHours = parseFloat(document.getElementById('inp-hours').value);
+  const shift6h    = document.getElementById('chk-6h').checked;
+  const shift12h   = document.getElementById('chk-12h').checked;
+  const editId     = document.getElementById('edit-id').value;
+
+  if (!surname) { alert('Inserisci il cognome.'); return; }
+  if (isNaN(weeklyHours) || weeklyHours <= 0) { alert('Ore settimanali non valide.'); return; }
+  if (!shift6h && !shift12h) { alert('Seleziona almeno un tipo di turno.'); return; }
+
+  if (editId) {
+    const w = state.workers.find(x => x.id === editId);
+    if (w) { w.surname = surname; w.weeklyHours = weeklyHours; w.shift6h = shift6h; w.shift12h = shift12h; }
+    document.getElementById('edit-id').value = '';
+    cancelEdit();
+  } else {
+    state.workers.push({ id: uid(), surname, weeklyHours, shift6h, shift12h });
+  }
+
+  saveState();
+  renderWorkers();
+  clearWorkerForm();
+}
+
+function editWorker(id) {
+  const w = state.workers.find(x => x.id === id);
+  if (!w) return;
+  document.getElementById('inp-surname').value   = w.surname;
+  document.getElementById('inp-hours').value     = w.weeklyHours;
+  document.getElementById('chk-6h').checked      = w.shift6h;
+  document.getElementById('chk-12h').checked     = w.shift12h;
+  document.getElementById('edit-id').value       = w.id;
+  document.getElementById('worker-form-title').textContent = '✏️ Modifica Lavoratore';
+  document.getElementById('btn-cancel-edit').style.display = '';
+  document.getElementById('inp-surname').focus();
+}
+
+function deleteWorker(id) {
+  if (!confirm('Eliminare questo lavoratore?')) return;
+  state.workers = state.workers.filter(w => w.id !== id);
+  // clean constraints — rebuild without keys belonging to this worker
+  state.constraints = Object.fromEntries(
+    Object.entries(state.constraints).filter(([k]) => !k.startsWith(id + '_'))
+  );
+  // clean assignments
+  Object.values(state.assignments).forEach(list => {
+    const idx = list.findIndex(a => a.workerId === id);
+    if (idx >= 0) list.splice(idx, 1);
+  });
+  saveState();
+  renderWorkers();
+}
+
+function cancelEdit() {
+  document.getElementById('edit-id').value = '';
+  document.getElementById('worker-form-title').textContent = '➕ Aggiungi Lavoratore';
+  document.getElementById('btn-cancel-edit').style.display = 'none';
+  clearWorkerForm();
+}
+
+function clearWorkerForm() {
+  document.getElementById('inp-surname').value = '';
+  document.getElementById('inp-hours').value   = '36';
+  document.getElementById('chk-6h').checked    = false;
+  document.getElementById('chk-12h').checked   = true;
+}
+
+function renderWorkers() {
+  const tbody  = document.getElementById('workers-tbody');
+  const table  = document.getElementById('workers-table');
+  const empty  = document.getElementById('workers-empty');
+
+  if (!state.workers.length) {
+    table.style.display = 'none';
+    empty.style.display = '';
+    return;
+  }
+
+  table.style.display = '';
+  empty.style.display = 'none';
+
+  tbody.innerHTML = state.workers.map(w => {
+    const badges = [];
+    if (w.shift6h)  badges.push('<span class="badge badge-purple">6h</span>');
+    if (w.shift12h) badges.push('<span class="badge badge-blue">12h</span>');
+    return `<tr>
+      <td>${escHtml(w.surname)}</td>
+      <td>${w.weeklyHours}h/sett.</td>
+      <td>${badges.join(' ')}</td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="editWorker('${w.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm"  onclick="deleteWorker('${w.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ──────────────────────────────────────────────────────────
+// PLANNING GRID – constraints
+// ──────────────────────────────────────────────────────────
+function loadPlanningGrid() {
+  const m = parseInt(document.getElementById('sel-month').value);
+  const y = parseInt(document.getElementById('inp-year').value);
+  if (isNaN(y) || y < MIN_YEAR || y > MAX_YEAR) { alert('Anno non valido.'); return; }
+  if (!state.workers.length) { alert('Aggiungi almeno un lavoratore prima.'); return; }
+
+  state.month = m;
+  state.year  = y;
+  saveState();
+  renderPlanningGrid();
+}
+
+function renderPlanningGrid() {
+  const wrap  = document.getElementById('planning-grid-wrap');
+  const empty = document.getElementById('planning-empty');
+
+  if (!state.workers.length) { wrap.style.display = 'none'; empty.style.display = ''; return; }
+
+  wrap.style.display = '';
+  empty.style.display = 'none';
+
+  const days = daysInMonth(state.year, state.month);
+  const grid = document.getElementById('planning-grid');
+  grid.innerHTML = '';
+
+  // Header row
+  const thead = document.createElement('thead');
+  const hrTr  = document.createElement('tr');
+  hrTr.innerHTML = `<th class="col-name">${MONTH_NAMES[state.month]} ${state.year}</th>`;
+  for (let d = 1; d <= days; d++) {
+    const we = isWeekend(state.year, state.month, d);
+    const dow = DOW_NAMES[isoDow(state.year, state.month, d)];
+    hrTr.innerHTML += `<th class="day-hdr${we?' weekend':''}">`
+      + `<div>${d}</div><div class="dn">${dow}</div></th>`;
+  }
+  thead.appendChild(hrTr);
+  grid.appendChild(thead);
+
+  // Worker rows
+  const tbody = document.createElement('tbody');
+  state.workers.forEach(w => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="col-name">${escHtml(w.surname)}</td>`;
+    for (let d = 1; d <= days; d++) {
+      const dk  = dateKey(state.year, state.month, d);
+      const ck  = constraintKey(w.id, dk);
+      const we  = isWeekend(state.year, state.month, d);
+      const val = state.constraints[ck] || '';
+      const td  = document.createElement('td');
+      td.className = `c-cell${we?' weekend':''}${val?' '+val:''}`;
+      td.dataset.wid = w.id;
+      td.dataset.dk  = dk;
+      td.addEventListener('click',       onCellLeftClick);
+      td.addEventListener('contextmenu', onCellRightClick);
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  });
+  grid.appendChild(tbody);
+}
+
+function onCellLeftClick(e) {
+  e.preventDefault();
+  const td  = e.currentTarget;
+  const ck  = constraintKey(td.dataset.wid, td.dataset.dk);
+  const cur = state.constraints[ck] || '';
+
+  if (cur === 'unavailable') {
+    delete state.constraints[ck];
+    td.classList.remove('unavailable');
+  } else {
+    if (cur === 'preferred') {
+      td.classList.remove('preferred');
+    }
+    state.constraints[ck] = 'unavailable';
+    td.classList.add('unavailable');
+  }
+  saveState();
+}
+
+function onCellRightClick(e) {
+  e.preventDefault();
+  const td  = e.currentTarget;
+  const ck  = constraintKey(td.dataset.wid, td.dataset.dk);
+  const cur = state.constraints[ck] || '';
+
+  if (cur === 'preferred') {
+    delete state.constraints[ck];
+    td.classList.remove('preferred');
+  } else {
+    if (cur === 'unavailable') {
+      td.classList.remove('unavailable');
+    }
+    state.constraints[ck] = 'preferred';
+    td.classList.add('preferred');
+  }
+  saveState();
+}
+
+function clearConstraints() {
+  if (!confirm('Azzerare tutti i vincoli?')) return;
+  state.constraints = {};
+  saveState();
+  renderPlanningGrid();
+}
+
+// ──────────────────────────────────────────────────────────
+// SCHEDULING ALGORITHM
+// ──────────────────────────────────────────────────────────
+
+/**
+ * Calculate target working days for a worker in the month.
+ *
+ * Monthly hours approximation: weeklyHours × (totalDays / 7).
+ * This is a proportional approximation: dividing by 7 converts the weekly
+ * rate to a daily rate, then multiplies by the actual calendar days in the
+ * month. It slightly under- or over-estimates compared to counting exact
+ * ISO weeks, but is accurate to within one shift for typical months.
+ *
+ * The result is rounded to the nearest whole number of shifts to produce
+ * a schedule that is achievable with discrete shift blocks.
+ */
+function calcTargetDays(worker, totalDays) {
+  const monthlyHours = worker.weeklyHours * (totalDays / DAYS_PER_WEEK);
+  if (worker.shift12h && worker.shift6h) {
+    const d12 = Math.floor(monthlyHours / 12);
+    const rem  = monthlyHours - d12 * 12;
+    const d6   = Math.round(rem / 6);
+    return { d12, d6, totalHours: d12 * 12 + d6 * 6 };
+  } else if (worker.shift12h) {
+    const d12 = Math.round(monthlyHours / 12);
+    return { d12, d6: 0, totalHours: d12 * 12 };
+  } else {
+    const d6 = Math.round(monthlyHours / 6);
+    return { d12: 0, d6, totalHours: d6 * 6 };
+  }
+}
+
+function generateSchedule() {
+  if (!state.workers.length) { alert('Aggiungi almeno un lavoratore.'); return; }
+
+  const totalDays = daysInMonth(state.year, state.month);
+  const assignments = {};
+  for (let d = 1; d <= totalDays; d++) {
+    assignments[dateKey(state.year, state.month, d)] = [];
+  }
+
+  // Per-worker mutable state during scheduling
+  const ws = {};
+  for (const w of state.workers) {
+    const tgt = calcTargetDays(w, totalDays);
+    ws[w.id] = {
+      rem12: tgt.d12,
+      rem6:  tgt.d6,
+      totalRem() { return this.rem12 + this.rem6; },
+      lastDay:    0,          // day number last worked
+      weekendCnt: 0,          // # weekend days worked
+    };
+  }
+
+  // Day-by-day assignment
+  for (let d = 1; d <= totalDays; d++) {
+    const dk  = dateKey(state.year, state.month, d);
+    const we  = isWeekend(state.year, state.month, d);
+    const rem = totalDays - d + 1; // remaining days including today
+
+    // Total remaining worker-days across all workers
+    const totalRemWD = state.workers.reduce((s, w) => s + ws[w.id].totalRem(), 0);
+
+    // How many workers should work today?
+    // Proportional: spread remaining worker-days evenly over remaining calendar days.
+    // If all workers have exhausted their targets, no one is assigned today.
+    if (totalRemWD === 0) continue; // no workers have remaining shifts; skip this day
+    const targetPerDay = Math.max(MIN_WORKERS_PER_DAY, Math.round(totalRemWD / rem));
+
+    // Score workers
+    const scored = state.workers
+      .map(w => {
+        const s = ws[w.id];
+        if (s.totalRem() <= 0) return null;
+        const ck  = constraintKey(w.id, dk);
+        const con = state.constraints[ck] || '';
+        if (con === 'unavailable') return null;
+
+        let score = 0;
+        if (con === 'preferred')  score += SCORE_PREFERRED;
+        if (s.lastDay === d - 1)  score -= SCORE_CONSECUTIVE_PENALTY; // consecutive-day penalty
+        if (we)                   score -= s.weekendCnt * SCORE_WEEKEND_WEIGHT; // weekend-fairness
+        score += s.totalRem() * SCORE_HOURS_WEIGHT; // prefer workers with more hours left
+
+        return { w, s, ck, score };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.score - a.score);
+
+    // Assign top `targetPerDay` workers
+    let assigned = 0;
+    for (const { w, s } of scored) {
+      if (assigned >= targetPerDay) break;
+
+      // Determine shift type
+      let shiftType, start, end;
+      if (s.rem12 > 0 && w.shift12h) {
+        shiftType = '12h'; start = '08:00'; end = '20:00';
+        s.rem12--;
+      } else if (s.rem6 > 0 && w.shift6h) {
+        // Choose morning or afternoon by balancing slots in the day
+        const dayList = assignments[dk];
+        const morningTaken    = dayList.some(a => a.shiftType === 'morning');
+        const afternoonTaken  = dayList.some(a => a.shiftType === 'afternoon');
+        if (!morningTaken) {
+          shiftType = 'morning'; start = '08:00'; end = '14:00';
+        } else if (!afternoonTaken) {
+          shiftType = 'afternoon'; start = '14:00'; end = '20:00';
+        } else {
+          // Both taken — assign morning (extra coverage)
+          shiftType = 'morning'; start = '08:00'; end = '14:00';
+        }
+        s.rem6--;
+      } else {
+        continue; // this worker has no matching shift type for remaining slots
+      }
+
+      assignments[dk].push({ workerId: w.id, shiftType, start, end });
+      s.lastDay = d;
+      if (we) s.weekendCnt++;
+      assigned++;
+    }
+  }
+
+  // Second pass: if a worker still has remaining shifts and the first pass
+  // was limited by targetPerDay, try to assign them (relaxed consecutive constraint)
+  for (const w of state.workers) {
+    const s = ws[w.id];
+    for (let d = 1; d <= totalDays && s.totalRem() > 0; d++) {
+      const dk  = dateKey(state.year, state.month, d);
+      const ck  = constraintKey(w.id, dk);
+      const we  = isWeekend(state.year, state.month, d);
+      const con = state.constraints[ck] || '';
+      if (con === 'unavailable') continue;
+      // Skip if already assigned this worker this day
+      if (assignments[dk].some(a => a.workerId === w.id)) continue;
+
+      let shiftType, start, end;
+      if (s.rem12 > 0 && w.shift12h) {
+        shiftType = '12h'; start = '08:00'; end = '20:00';
+        s.rem12--;
+      } else if (s.rem6 > 0 && w.shift6h) {
+        const dayList = assignments[dk];
+        const morningTaken   = dayList.some(a => a.shiftType === 'morning');
+        const afternoonTaken = dayList.some(a => a.shiftType === 'afternoon');
+        if (!morningTaken) {
+          shiftType = 'morning'; start = '08:00'; end = '14:00';
+        } else {
+          shiftType = 'afternoon'; start = '14:00'; end = '20:00';
+        }
+        s.rem6--;
+      } else { continue; }
+
+      assignments[dk].push({ workerId: w.id, shiftType, start, end });
+      if (we) s.weekendCnt++;
+    }
+  }
+
+  state.assignments = assignments;
+  saveState();
+  renderResults();
+  switchTab('results');
+}
+
+// ──────────────────────────────────────────────────────────
+// RESULTS GRID
+// ──────────────────────────────────────────────────────────
+function renderResults() {
+  const wrap  = document.getElementById('results-grid-wrap');
+  const empty = document.getElementById('results-empty');
+  const sc    = document.getElementById('stats-card');
+
+  const hasAssignments = Object.values(state.assignments).some(a => a.length > 0);
+  if (!hasAssignments || !state.workers.length) {
+    wrap.style.display = 'none';
+    empty.style.display = '';
+    sc.style.display = 'none';
+    return;
+  }
+
+  wrap.style.display = '';
+  empty.style.display = 'none';
+  sc.style.display = '';
+
+  const totalDays = daysInMonth(state.year, state.month);
+  const grid = document.getElementById('results-grid');
+  grid.innerHTML = '';
+
+  // Stats accumulators
+  const workerStats = {};
+  state.workers.forEach(w => {
+    workerStats[w.id] = { hours: 0, days: 0, weekendDays: 0 };
+  });
+
+  // Header
+  const thead = document.createElement('thead');
+  const hrTr  = document.createElement('tr');
+  hrTr.innerHTML = `<th class="col-name">${MONTH_NAMES[state.month]} ${state.year}</th>`;
+  for (let d = 1; d <= totalDays; d++) {
+    const we  = isWeekend(state.year, state.month, d);
+    const dow = DOW_NAMES[isoDow(state.year, state.month, d)];
+    hrTr.innerHTML += `<th class="day-hdr${we?' weekend':''}">`
+      + `<div>${d}</div><div class="dn">${dow}</div></th>`;
+  }
+  hrTr.innerHTML += '<th class="col-total">Ore</th><th class="col-total">Giorni</th><th class="col-total">Weekend</th>';
+  thead.appendChild(hrTr);
+  grid.appendChild(thead);
+
+  // Worker rows
+  const tbody = document.createElement('tbody');
+  state.workers.forEach(w => {
+    const tr   = document.createElement('tr');
+    const tgt  = calcTargetDays(w, totalDays);
+    tr.innerHTML = `<td class="col-name">${escHtml(w.surname)}</td>`;
+
+    for (let d = 1; d <= totalDays; d++) {
+      const dk      = dateKey(state.year, state.month, d);
+      const we      = isWeekend(state.year, state.month, d);
+      const ck      = constraintKey(w.id, dk);
+      const con     = state.constraints[ck] || '';
+      const dayList = state.assignments[dk] || [];
+      const asgn    = dayList.find(a => a.workerId === w.id);
+      const td      = document.createElement('td');
+      td.className  = `r-cell${we?' weekend':''}`;
+
+      if (asgn) {
+        const cls = asgn.shiftType === '12h'       ? 'shift-12h'
+                  : asgn.shiftType === 'morning'   ? 'shift-morning'
+                  : 'shift-afternoon';
+        td.classList.add(cls);
+        const lbl = asgn.shiftType === '12h'       ? '12h'
+                  : asgn.shiftType === 'morning'   ? 'Mat'
+                  : 'Pom';
+        td.textContent = lbl;
+
+        // Accumulate stats
+        const hours = asgn.shiftType === '12h' ? 12 : 6;
+        workerStats[w.id].hours += hours;
+        workerStats[w.id].days++;
+        if (we) workerStats[w.id].weekendDays++;
+      } else if (con === 'unavailable') {
+        td.classList.add('unavailable');
+        td.textContent = 'ND';
+      }
+
+      tr.appendChild(td);
+    }
+
+    // Totals
+    const st = workerStats[w.id];
+    tr.innerHTML += `<td class="col-total"><strong>${st.hours}h</strong><br><small>${tgt.totalHours.toFixed(0)}h tgt</small></td>`
+      + `<td class="col-total">${st.days}</td>`
+      + `<td class="col-total">${st.weekendDays}</td>`;
+    tbody.appendChild(tr);
+  });
+  grid.appendChild(tbody);
+
+  // Stats cards
+  renderStats(workerStats);
+}
+
+function renderStats(workerStats) {
+  const container = document.getElementById('stats-container');
+  const totalDays = daysInMonth(state.year, state.month);
+
+  const rows = state.workers.map(w => {
+    const st  = workerStats[w.id];
+    const tgt = calcTargetDays(w, totalDays);
+    const diff = st.hours - Math.round(tgt.totalHours);
+    const diffStr = diff >= 0 ? `+${diff}h` : `${diff}h`;
+    const diffColor = Math.abs(diff) <= 6 ? '#16a34a' : diff > 0 ? '#d97706' : '#dc2626';
+    return `<tr>
+      <td><strong>${escHtml(w.surname)}</strong></td>
+      <td>${st.hours}h / ${Math.round(tgt.totalHours)}h tgt</td>
+      <td style="color:${diffColor};font-weight:600">${diffStr}</td>
+      <td>${st.days} giorni</td>
+      <td>${st.weekendDays} weekend</td>
+    </tr>`;
+  }).join('');
+
+  container.innerHTML = `<table>
+    <thead><tr>
+      <th>Lavoratore</th><th>Ore lavorate / Target</th><th>Scostamento</th>
+      <th>Giorni lavorati</th><th>Giorni weekend</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ──────────────────────────────────────────────────────────
+// IMPORT / EXPORT
+// ──────────────────────────────────────────────────────────
+function startExport() {
+  const data = {
+    version: 1,
+    workers: state.workers,
+    month: state.month,
+    year: state.year,
+    constraints: state.constraints,
+    assignments: state.assignments,
+  };
+  document.getElementById('export-textarea').value = JSON.stringify(data, null, 2);
+  document.getElementById('export-modal').classList.add('open');
+}
+
+function downloadJSON() {
+  const text = document.getElementById('export-textarea').value;
+  const blob = new Blob([text], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `incastraturni_${state.year}_${String(state.month).padStart(2,'0')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function handleImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.workers) throw new Error('Formato non valido');
+      state.workers     = data.workers     || [];
+      state.month       = data.month       || state.month;
+      state.year        = data.year        || state.year;
+      state.constraints = data.constraints || {};
+      state.assignments = data.assignments || {};
+      saveState();
+      refreshAll();
+      alert('Importazione completata!');
+    } catch(err) {
+      alert(`Errore nell'importazione: ${err.message}`);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ──────────────────────────────────────────────────────────
+// FULL REFRESH
+// ──────────────────────────────────────────────────────────
+function refreshAll() {
+  // Sync month/year selectors
+  document.getElementById('sel-month').value = state.month;
+  document.getElementById('inp-year').value  = state.year;
+  renderWorkers();
+  renderPlanningGrid();
+  renderResults();
+}
+
+// ──────────────────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────────────────
+(function init() {
+  loadState();
+  document.getElementById('sel-month').value = state.month;
+  document.getElementById('inp-year').value  = state.year;
+  renderWorkers();
+  // Only render planning grid if we have workers
+  if (state.workers.length) renderPlanningGrid();
+  renderResults();
+})();
+</script>
+</body>
+</html>
